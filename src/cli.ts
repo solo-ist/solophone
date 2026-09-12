@@ -326,6 +326,39 @@ async function cmdDeleteTest(noteId: string | undefined, force: boolean): Promis
   }
 }
 
+async function cmdDevMode(action: string | undefined): Promise<void> {
+  if (action !== undefined && action !== 'show' && action !== 'on' && action !== 'off') {
+    throw new LightApiError('Usage: dev-mode [show|on|off]')
+  }
+  const client = await getClient()
+  const deviceId = client.deviceId
+  if (!deviceId) throw new LightApiError('No device id on session — run `login` first')
+
+  if (action === 'on' || action === 'off') {
+    const echoed = await client.setDeveloperMode(deviceId, action === 'on')
+    const state = echoed === null ? `set to ${action} (server echoed no value)` : echoed ? 'ON' : 'OFF'
+    console.log(`Developer mode ${state} for device ${deviceId}`)
+    console.log('Propagation takes a few moments. Reboot the phone for the Developer settings menu to update.')
+    return
+  }
+  const { devices } = await client.listDevices()
+  const device = devices.find((d) => d.id === deviceId)
+  if (!device) throw new LightApiError(`Device ${deviceId} not found on account`)
+  console.log(`Device ${device.id} (${device.deviceType ?? '?'}, LightOS ${device.osVersion ?? '?'})`)
+  console.log(`  developer mode: ${device.developerMode === null ? 'unknown' : device.developerMode ? 'ON' : 'OFF'}`)
+}
+
+async function cmdTools(): Promise<void> {
+  const client = await getClient()
+  const deviceId = client.deviceId
+  if (!deviceId) throw new LightApiError('No device id on session — run `login` first')
+  const tools = await client.listTools(deviceId)
+  console.log(`${tools.length} tool(s) in the cloud catalog for this device:`)
+  for (const t of tools) {
+    console.log(`  ${t.id}  ${t.namespace ?? '?'}  ${t.name ?? ''}`)
+  }
+}
+
 // ---------------------------------------------------------------- main
 
 function usage(): void {
@@ -341,6 +374,9 @@ Usage: npm run light -- <command>
                              a .md file has its frontmatter stripped)
   delete-test <id> [--force] Delete a note (only "${TEST_TITLE_PREFIX}" notes
                              unless --force)
+  dev-mode [show|on|off]     Show or toggle LightOS Developer Mode (cloud-side;
+                             reboot the phone after changing)
+  tools                      List the cloud tool catalog for this device
 
 Credentials: LIGHT_EMAIL / LIGHT_PASSWORD via .env (see .env.example), or
 interactive prompt. Session cached in .token.json (gitignored, mode 600).`)
@@ -364,6 +400,10 @@ async function main(): Promise<void> {
       return cmdUpdateTest(positional[0], positional[1])
     case 'delete-test':
       return cmdDeleteTest(positional[0], force)
+    case 'dev-mode':
+      return cmdDevMode(positional[0])
+    case 'tools':
+      return cmdTools()
     default:
       usage()
       if (cmd !== undefined && cmd !== 'help' && cmd !== '--help') process.exitCode = 1

@@ -47,6 +47,7 @@ export interface DeviceSummary {
   deviceType: string | null
   osVersion: string | null
   phoneNumbers: string[]
+  developerMode: boolean | null
 }
 
 export class LightApiError extends Error {
@@ -189,9 +190,40 @@ export class LightClient {
         deviceType: str(d.attributes?.device_type),
         osVersion: str(d.attributes?.light_os_version_name),
         phoneNumbers: sims.map((s) => str(s.attributes?.phone_number)).filter((p): p is string => p !== null),
+        developerMode: typeof d.attributes?.developer_mode === 'boolean' ? d.attributes.developer_mode : null,
       }
     })
     return { devices, raw: doc }
+  }
+
+  /**
+   * PATCH /api/devices/{id}/developer_mode — the same toggle the dashboard
+   * drives. Note the JSON:API type is singular "device" here, unlike the
+   * plural resource types elsewhere. Returns the server-echoed new value.
+   * Changes take a few moments to propagate to the phone.
+   */
+  async setDeveloperMode(deviceId: string, enabled: boolean): Promise<boolean | null> {
+    const doc = (await this.request('PATCH', `/api/devices/${encodeURIComponent(deviceId)}/developer_mode`, {
+      data: {
+        id: deviceId,
+        type: 'device',
+        attributes: { developer_mode: enabled },
+      },
+    })) as JsonApiDocument | null
+    const data = doc?.data
+    const record = Array.isArray(data) ? data[0] : data
+    const value = record?.attributes?.developer_mode
+    return typeof value === 'boolean' ? value : null
+  }
+
+  /** GET /api/tools?device_id — the cloud catalog of installable tools. */
+  async listTools(deviceId: string): Promise<Array<{ id: string; namespace: string | null; name: string | null }>> {
+    const doc = (await this.request('GET', `/api/tools?device_id=${encodeURIComponent(deviceId)}`)) as JsonApiDocument
+    return asArray(doc.data).map((t) => ({
+      id: t.id,
+      namespace: str(t.attributes?.namespace),
+      name: str(t.attributes?.name) ?? str(t.attributes?.title),
+    }))
   }
 
   /**
