@@ -1,0 +1,9 @@
+# Credentials & session
+.env
+.token.json
+
+# Pulled note content (personal)
+notes/
+
+# Node
+node_modules/
