@@ -1,4 +1,4 @@
-# Sideloaded tools — LP3 (LP3-SERIAL-REDACTED)
+# Sideloaded tools — Light Phone III
 
 Installed 2026-09-12 on LightOS `572-release-lp3` (Android 14 / API 34) via
 `adb install -r`. Every APK's signing cert was checked with
