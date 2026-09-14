@@ -13,7 +13,7 @@ recorded here is the baseline; if it ever changes on an update, stop.
 | Composer | 1.0.2 | `com.zacksimpson.composer` | github.com/zacksimpson/composer-tool | `c36238493aa1055c58ca19a350e68c22e53793226887d0bee290611bf1fd12c3` | TOFU |
 | Roll (LightCamera) | 3.7.159 | `com.gios.lightcamera` | github.com/gi-os/LightCamera | `d11cf9eecbfd5b482946e317f1dbf785a594234e313d7aa92042be3616b66dc3` | TOFU |
 | BrightNews | 3.6.0 | `com.lightrss.reader` | github.com/gi-os/BrightNews | `c6902aa1870b4ffa2fd0cd627643dc8ddee7cc0fdbd1752febb3d911092d8ec5` | checksum ✅ + matches published pin ✅ |
-| Review (own build, 2026-09-13) | 0.4.1 | `com.soloist.review` | local: `~/Code/readwise-review` (light-sdk scaffold) | lightsdk-dev key (checked into light-sdk) | built + installed from source |
+| Review (own build, 2026-09-13) | 0.4.2 | `com.soloist.review` | local: `~/Code/readwise-review` (light-sdk scaffold) | lightsdk-dev key (checked into light-sdk) | built + installed from source |
 
 **Review** is a personal Readwise Daily Review tool (Kotlin/Compose on the
 light-sdk; Ktor → `readwise.io/api/v2/review/`). ⚠️ The installed APK has the
