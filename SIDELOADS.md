@@ -17,18 +17,18 @@ recorded here is the baseline; if it ever changes on an update, stop.
 | BrightMarket | 1.31.62 | `com.gios.brightmarket` | github.com/gi-os/BrightMarket | `c15078bcb72a89c67efb54d1a9fc1b00cc88da578891f8e96233a7d279550df6` | TOFU (`CN=BrightMarket, OU=gi-os`) |
 | BrightMailbox | 2.30.34 | `com.gios.brightmailbox` | gi-os (via BrightMarket) | `ab866f2a03fcd4d8e88d2da1bb3e295d080ac28f46ae6c5bb8c9b9d9cc9e23c9` | TOFU (`CN=BrightMailbox, OU=gi-os`) |
 | BrightControl ("Controls") | 4.34.293 | `com.gios.lightcontrol` | gi-os (via BrightMarket) | `a38858d990bb61057ef53d1f8aa3c5854d01f68585b34f115793b06298b593e8` | TOFU (`CN=LightControl, OU=gi-os`) |
-| Verses | 1.0.1 | `com.zacksimpson.verses` | zacksimpson (via BrightMarket) | `b9c33e29b0ccad2bff11acab55f65a3c517ef4bc92cd9c77785366fa353d5f28` | ⚠️ **public lightsdk-dev key** — see below |
 | Review (own build) | 0.6.2 | `com.soloist.review` | local: `~/Code/readwise-review` (light-sdk scaffold) | `83ac3b733db804765d4a888788d0a47d362e9682488712836b3ca449133c2da7` (`CN=soloist review`) | built + installed from source |
 
 Also present but **not sideloaded**: `at.bitfire.davdroid` 2.5.1-**ose-light**
 is a Light-customized *system* app at `/product/app/DAVx5`, installer
 `com.lightos`. See the Calendar section.
 
-⚠️ **Verses is signed with `CN=LightSDK Dev`** — the keystore checked into
-light-sdk (`b9c33e29…5f28`, `storePassword = "android"`). That key is public,
-so anyone can forge an installable update for that package. Nothing to be done
-about it from here beyond knowing: don't treat a Verses update as
-authenticated, and never reuse that key for anything of your own.
+⚠️ **Check the signing key before trusting a community tool.** Verses shipped
+signed with `CN=LightSDK Dev` — the keystore checked into light-sdk
+(`b9c33e29…5f28`, `storePassword = "android"`). That key is public, so anyone
+could forge an installable update for it. It was removed on that basis
+(see Removed). Never reuse that key for anything of your own, and treat any
+tool signed with it as unauthenticated.
 
 **Review** is a personal Readwise Daily Review tool (Kotlin/Compose on the
 light-sdk; Ktor → `readwise.io/api/v2/review/`). Since 0.6.0 the Readwise token
@@ -69,19 +69,48 @@ compare manually).
 ## Obtainium repo list (add on-phone)
 
 Obtainium is the source of truth for updates; BrightMarket is discovery-only.
+Nine sources configured and resolving as of 2026-09-19:
 
 - `https://github.com/ImranR98/Obtainium` — so it self-updates
 - `https://github.com/jabberbox/molly-light`
 - `https://github.com/zacksimpson/composer-tool`
-- `https://github.com/gi-os/LightCamera`
+- `https://github.com/gi-os/Roll` — **was `gi-os/LightCamera`, renamed**
 - `https://github.com/gi-os/BrightNews` — APK regex filter `LightRSS-.*\.apk`, prereleases off
 - `https://github.com/gi-os/BrightMarket`
+- `https://github.com/gi-os/BrightMailbox`
+- `https://github.com/gi-os/BrightControl` — **was `gi-os/LightControl`, renamed**
+- `https://github.com/bluesky-social/social-app`
+
+Both gi-os renames 301-redirect, which the GitHub API follows but which are
+worth correcting at the source. Resolve one with:
+`curl -sL https://api.github.com/repos/<owner>/<old> | grep full_name`.
+
+### Adding sources without tapping
+
+Obtainium registers the `obtainium://` scheme, so sources can be added over
+adb instead of by hand. Fire the deep link, then tap Continue on the
+"Import app" dialog:
+
+```sh
+URL=$(python3 -c '
+import json, urllib.parse
+app = {"id":"com.gios.lightcamera","url":"https://github.com/gi-os/Roll",
+       "author":"gi-os","name":"Roll"}
+print("obtainium://app/" + urllib.parse.quote(json.dumps(app), safe=""))
+')
+adb shell am start -a android.intent.action.VIEW -d "$URL"
+```
+
+Per-source options go in an `additionalSettings` key whose value is a JSON
+**string** — that's how BrightNews's filter is set:
+`{"apkFilterRegEx": "LightRSS-.*\\.apk", "invertAPKFilter": false, "includePrereleases": false}`.
 
 Three things Obtainium structurally **cannot** track, so don't expect full
 coverage: apps distributed only as Play App Bundles (it can't install split
 APKs — those need `adb install-multiple` by hand), the locally built Review
 tool (no public release), and anything BrightMarket installed that has no
-GitHub release feed.
+GitHub release feed. In practice that means the eight Play-sourced apps above
+are Aurora's problem, not Obtainium's.
 
 ## Full Android apps (2026-09-19)
 
@@ -97,7 +126,6 @@ with a real Google account. Bluesky came straight from GitHub instead.
 | Todoist | `com.todoist` | v12282 | 3 | `7c89a7eb186f7b96f02f45fb067679fa54efebbbe67f34a0e7ca851e355b3a44` |
 | Slack | `com.Slack` | 26.09.30.0 | 3 | `33533619756e8701a82e7887565b152dc348188711ebb5c48d073b2c942f7e41` |
 | Claude | `com.anthropic.claude` | 1.260916.19 | 4 | `305a1e8a432e5ec0c612b2465359c3b88e3c95d6253599ac6088562b818b64a0` |
-| Endel | `com.endel.endel` | 3.135.887 | 24 | `9289c30cee30ca40278504d5d375c93ace705ebf57a444a9e30a3132d3345d19` |
 | Sonos | `com.sonos.acr2` | 89.00.51 | 3 | `7c34eb3cfbda05faf56e8890a2abbac14b3036e6e4358849b98e8819b6b7b329` |
 | 1Password | `com.onepassword.android` | 8.12.36 | 4 | `b35b68d5ce8450557c6a55fd64b51feac110cb36d6a3521c5948db3a380a34a9` |
 
@@ -106,20 +134,8 @@ DN, for instance, reads `CN=Android, O=Google Inc.`. They still work as a TOFU
 baseline for detecting a change, but the DN does not identify the vendor the
 way the gi-os certs above do.
 
-Seven of the eight are usable. **Endel is not — it hard-fails on Play
-licensing.** `com.pairip.licensecheck.LicenseActivity` takes over from
-`RootActivity` at launch and shows an empty dialog with only CLOSE; the app
-never reaches a login screen, so no credential workaround applies. PairIP wants
-a Play integrity attestation and there is no GMS to answer it (and microG
-couldn't forge one either — see quirks). **Use the web player at
-`app.endel.io` in Chromium instead** — verified rendering on-device
-2026-09-19, and one Endel subscription covers all platforms. Untested: whether
-its audio survives screen-off.
-
-Note the failure mode, because it invalidates a lazy smoke test: a PairIP
-license dialog *is* the app's own package, so "is `<pkg>` the foreground
-activity?" reports success while the app is dead. Check for a usable screen,
-not a foregrounded package.
+All seven install and launch. An eighth, Endel, was installed and then removed
+— it hard-fails on Play licensing (see Removed).
 
 **Claude is fine and needs no Google.** Its login screen has an
 "Enter your email" field directly under the Google button — email plus a
@@ -342,6 +358,25 @@ adb shell content query --uri content://com.android.calendar/calendars \
   keyboard route again).
 
 ## Removed
+
+- **Endel** (`com.endel.endel` 3.135.887) — installed then uninstalled
+  2026-09-19. It **hard-fails on Play licensing**:
+  `com.pairip.licensecheck.LicenseActivity` takes over from `RootActivity` at
+  launch and shows an empty dialog with only CLOSE. The app never reaches a
+  login screen, so no credential workaround applies — PairIP wants a Play
+  integrity attestation and there is no GMS to answer it (microG couldn't forge
+  one either; see quirks). **Use the web player at `app.endel.io` in Chromium**
+  — verified rendering on-device, and one Endel subscription covers all
+  platforms. Untested: whether its audio survives screen-off.
+
+  Note the failure mode, because it invalidates a lazy smoke test: a PairIP
+  dialog *is* the app's own package, so "is `<pkg>` the foreground activity?"
+  reports success while the app is dead. Check for a usable screen, not a
+  foregrounded package.
+
+- **Verses** (`com.zacksimpson.verses` 1.0.1) — uninstalled 2026-09-19 because
+  it ships signed with the public `lightsdk-dev` key (`b9c33e29…5f28`), so any
+  party could publish a forged update for it.
 
 - **LightChat** (`com.gios.lightchat` 2.38.81) — uninstalled 2026-09-19 with
   `adb uninstall com.gios.lightchat`. It was a user app in `/data/app`
