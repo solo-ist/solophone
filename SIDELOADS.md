@@ -80,6 +80,9 @@ Nine sources configured and resolving as of 2026-09-19:
 - `https://github.com/gi-os/BrightMailbox`
 - `https://github.com/gi-os/BrightControl` — **was `gi-os/LightControl`, renamed**
 - `https://github.com/bluesky-social/social-app`
+- `https://github.com/home-assistant/android` — APK regex filter
+  `app-minimal-release\.apk`. **The filter is load-bearing**: that release also
+  ships `app-full-release.apk`, which is the FCM build and is useless here.
 
 Both gi-os renames 301-redirect, which the GitHub API follows but which are
 worth correcting at the source. Resolve one with:
@@ -128,6 +131,7 @@ with a real Google account. Bluesky came straight from GitHub instead.
 | Claude | `com.anthropic.claude` | 1.260916.19 | 4 | `305a1e8a432e5ec0c612b2465359c3b88e3c95d6253599ac6088562b818b64a0` |
 | Sonos | `com.sonos.acr2` | 89.00.51 | 3 | `7c34eb3cfbda05faf56e8890a2abbac14b3036e6e4358849b98e8819b6b7b329` |
 | 1Password | `com.onepassword.android` | 8.12.36 | 4 | `b35b68d5ce8450557c6a55fd64b51feac110cb36d6a3521c5948db3a380a34a9` |
+| Home Assistant (**minimal**) | `io.homeassistant.companion.android.minimal` | 2026.6.5-minimal | 1 | `11194ba809b42ddf0e1a7dec6842a59c7ff1119c5482e95febffd5c6014daa5a` (`O=Home Assistant`) |
 
 ⚠️ These certs are **Play App Signing** keys, not the vendors' own — 1Password's
 DN, for instance, reads `CN=Android, O=Google Inc.`. They still work as a TOFU
@@ -143,10 +147,26 @@ verification code. Only Bluesky, Spotify, Claude and 1Password have been
 verified past their sign-in walls; Slack, Todoist and Sonos are installed and
 launching but unproven beyond that.
 
-**None of them will ever notify.** They are all FCM-only and there is no GMS;
-see the UnifiedPush note under quirks. `POST_NOTIFICATIONS` is granted to each
-anyway, because locally scheduled notifications (Todoist reminders, alarms)
-don't go through FCM.
+**Home Assistant is the exception worth copying.** Take the **minimal** flavor
+— built for de-Googled devices — from GitHub or F-Droid, never the Play/full
+build. It carries zero GMS references, produces no `GooglePlayServicesUtil`
+warnings at all, and is signed by `O=Home Assistant` rather than a Play
+re-signing key, so its provenance is better than anything Aurora delivers. It
+does push over a **persistent WebSocket to your own HA server** (24 websocket
+refs in the APK, zero UnifiedPush), so notifications genuinely work here. Two
+caveats: it needs Local Push enabled server-side, and a persistent socket has
+to survive LightOS force-foregrounding on screen-off — same class of problem
+as Molly, so it's Doze-whitelisted and wants `light_force_focus_level 2`.
+
+**None of the Play-sourced apps will ever notify.** They are all FCM-only and
+there is no GMS; see the UnifiedPush note under quirks. `POST_NOTIFICATIONS` is
+granted to each anyway, because locally scheduled notifications (Todoist
+reminders, alarms) don't go through FCM.
+
+The pattern generalizes: **before installing anything from Play, check whether
+it publishes a de-Googled build.** F-Droid, GitHub releases and "minimal" /
+"foss" flavors are worth hunting for — they're the difference between an app
+that notifies and one that doesn't.
 
 Sonos additionally needs location, or speaker discovery fails with
 `SecurityException: UID … has no location permission` on `startScan`:
