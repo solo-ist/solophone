@@ -106,10 +106,26 @@ DN, for instance, reads `CN=Android, O=Google Inc.`. They still work as a TOFU
 baseline for detecting a change, but the DN does not identify the vendor the
 way the gi-os certs above do.
 
-**All eight install and launch. None hard-failed** — including Endel and
-Claude, which were both predicted to break on Play Billing / Play Integrity.
-Whether Endel's *subscription* validates without Play Billing is a separate
-question, unanswered until sign-in.
+Seven of the eight are usable. **Endel is not — it hard-fails on Play
+licensing.** `com.pairip.licensecheck.LicenseActivity` takes over from
+`RootActivity` at launch and shows an empty dialog with only CLOSE; the app
+never reaches a login screen, so no credential workaround applies. PairIP wants
+a Play integrity attestation and there is no GMS to answer it (and microG
+couldn't forge one either — see quirks). **Use the web player at
+`app.endel.io` in Chromium instead** — verified rendering on-device
+2026-09-19, and one Endel subscription covers all platforms. Untested: whether
+its audio survives screen-off.
+
+Note the failure mode, because it invalidates a lazy smoke test: a PairIP
+license dialog *is* the app's own package, so "is `<pkg>` the foreground
+activity?" reports success while the app is dead. Check for a usable screen,
+not a foregrounded package.
+
+**Claude is fine and needs no Google.** Its login screen has an
+"Enter your email" field directly under the Google button — email plus a
+verification code. Only Bluesky, Spotify, Claude and 1Password have been
+verified past their sign-in walls; Slack, Todoist and Sonos are installed and
+launching but unproven beyond that.
 
 **None of them will ever notify.** They are all FCM-only and there is no GMS;
 see the UnifiedPush note under quirks. `POST_NOTIFICATIONS` is granted to each
@@ -280,8 +296,31 @@ adb shell content query --uri content://com.android.calendar/calendars \
   notifications misbehave: `adb shell settings put system light_force_focus_level 1`
   (alerts only; `2` never auto-foregrounds; `0` default). Test any
   background-audio app with the screen off before trusting it.
-- Never install microG/GMS (destabilizes the phone; Molly doesn't need it).
-  Don't battery-hibernate Molly.
+- **microG/GMS is not installable on this device — it's a hardware policy, not
+  a preference.** Don't re-litigate it as a judgment call. microG impersonates
+  `com.google.android.gms` and apps check for Google's signature on that
+  package, so it needs **signature spoofing** — a framework-level patch.
+  LineageOS/CalyxOS/e ship it; a stock ROM needs root plus patching, and real
+  GMS additionally needs to live in `/system/priv-app` as a privileged app.
+  Both routes need root, and root needs an unlocked bootloader. On this phone
+  (verified 2026-09-19):
+
+  ```
+  ro.boot.verifiedbootstate = green      ro.boot.flash.locked = 1
+  ro.boot.vbmeta.device_state = locked   sys.oem_unlock_allowed = 0
+  ro.debuggable = 0                      ro.secure = 1
+  no su binary; no FAKE_PACKAGE_SIGNATURE permission on this ROM
+  ```
+
+  `sys.oem_unlock_allowed = 0` is the one that closes it: Light has not exposed
+  an OEM-unlock toggle, so there is no path to root, therefore none to
+  signature spoofing, therefore none to microG.
+
+  What that permanently costs: **FCM push and every "Continue with Google"
+  button.** microG implements GCM and the auth API, so it would have fixed
+  both. It would *not* have fixed Play Integrity attestation (see Endel), which
+  Google designed to be unforgeable.
+- Don't battery-hibernate Molly.
 - **Push without GMS is possible, but only via UnifiedPush.** LightOS ships a
   distributor at `com.lightos/com.thelightphone.sdk.server.LightPushDistributor`
   — the only one on the device — and Molly Light uses it. FCM-only apps get
@@ -314,8 +353,9 @@ adb shell content query --uri content://com.android.calendar/calendars \
 
 - **iMessage bridges — BlueBubbles, 2026-09-19.** Dead end on LightOS. The
   Android client receives push via Firebase Cloud Messaging, which requires
-  GMS/microG (see the never-install-microG rule above), so notifications
-  cannot arrive at all. The only GMS-free path is BlueBubbles' Foreground
+  GMS/microG — neither of which is *installable* on this device at all
+  (locked bootloader, `sys.oem_unlock_allowed = 0`; see quirks). So this is
+  permanent, not a house-rule preference: notifications cannot arrive. The only GMS-free path is BlueBubbles' Foreground
   Service socket, which needs a non-rotating server URL — meaning DDNS plus
   port forwarding, regressing the no-ports-forwarded posture. Independently:
   the macOS server half is stagnant (last release v1.9.9, May 2025) while
