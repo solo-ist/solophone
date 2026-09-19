@@ -27,6 +27,7 @@ import {
   type LightNote,
 } from './notes.js'
 import { filenameFor, markdownBody, noteToMarkdown } from './markdown.js'
+import { isSafeNoteFilename, resolveUnder } from './paths.js'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const SESSION_PATH = join(ROOT, '.token.json')
@@ -37,6 +38,16 @@ const TEST_TITLE_PREFIX = 'Prose sync test'
 
 interface SyncState {
   [noteId: string]: { path: string; updatedAt: string; title: string }
+}
+
+// ------------------------------------------------------------- path containment
+
+function resolveInNotes(relative: string): string {
+  try {
+    return resolveUnder(NOTES_DIR, relative)
+  } catch {
+    throw new LightApiError(`Refusing path outside notes/: ${JSON.stringify(relative)}`)
+  }
 }
 
 // ---------------------------------------------------------------- env & session
@@ -144,16 +155,33 @@ async function getClient(): Promise<LightClient> {
 // ---------------------------------------------------------------- sync state
 
 async function loadState(): Promise<SyncState> {
+  let raw: unknown
   try {
-    return JSON.parse(await readFile(STATE_PATH, 'utf8')) as SyncState
+    raw = JSON.parse(await readFile(STATE_PATH, 'utf8'))
   } catch {
     return {}
   }
+  // Persisted state is still input: drop any entry whose shape or path is off.
+  const state: SyncState = {}
+  if (typeof raw !== 'object' || raw === null) return state
+  for (const [id, entry] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof entry !== 'object' || entry === null) continue
+    const { path, updatedAt, title } = entry as Record<string, unknown>
+    if (typeof path !== 'string' || typeof updatedAt !== 'string' || typeof title !== 'string') continue
+    if (!isSafeNoteFilename(NOTES_DIR, path)) {
+      console.error(`warning: dropping sync-state entry with unsafe path: ${JSON.stringify(path)}`)
+      continue
+    }
+    state[id] = { path, updatedAt, title }
+  }
+  return state
 }
 
 async function saveState(state: SyncState): Promise<void> {
-  await mkdir(dirname(STATE_PATH), { recursive: true })
-  await writeFile(STATE_PATH, JSON.stringify(state, null, 2) + '\n')
+  await mkdir(dirname(STATE_PATH), { recursive: true, mode: 0o700 })
+  await chmod(dirname(STATE_PATH), 0o700)
+  await writeFile(STATE_PATH, JSON.stringify(state, null, 2) + '\n', { mode: 0o600 })
+  await chmod(STATE_PATH, 0o600)
 }
 
 // ---------------------------------------------------------------- commands
@@ -217,7 +245,8 @@ async function cmdPull(): Promise<void> {
   const client = await getClient()
   const notes = await listNotes(client)
   const state = await loadState()
-  await mkdir(NOTES_DIR, { recursive: true })
+  await mkdir(NOTES_DIR, { recursive: true, mode: 0o700 })
+  await chmod(NOTES_DIR, 0o700)
 
   const liveIds = new Set(notes.map((n) => n.id))
   let pulled = 0
@@ -231,9 +260,9 @@ async function cmdPull(): Promise<void> {
     }
     const prior = state[note.id]
     const filename = filenameFor(note)
-    const path = join(NOTES_DIR, filename)
+    const path = resolveInNotes(filename)
 
-    if (prior && prior.updatedAt === note.updatedAt && existsSync(join(NOTES_DIR, prior.path))) {
+    if (prior && prior.updatedAt === note.updatedAt && existsSync(resolveInNotes(prior.path))) {
       skipped++
       continue
     }
@@ -242,11 +271,12 @@ async function cmdPull(): Promise<void> {
     first = false
 
     const content = (await getNoteContent(client, note.id)).toString('utf8')
-    await writeFile(path, noteToMarkdown(note, content))
+    await writeFile(path, noteToMarkdown(note, content), { mode: 0o600 })
+    await chmod(path, 0o600)
 
     // Title changed -> filename changed; drop the stale file.
-    if (prior && prior.path !== filename && existsSync(join(NOTES_DIR, prior.path))) {
-      await unlink(join(NOTES_DIR, prior.path))
+    if (prior && prior.path !== filename && existsSync(resolveInNotes(prior.path))) {
+      await unlink(resolveInNotes(prior.path))
     }
     state[note.id] = { path: filename, updatedAt: note.updatedAt, title: note.title }
     console.log(`  pulled: ${filename}`)
@@ -318,9 +348,9 @@ async function cmdDeleteTest(noteId: string | undefined, force: boolean): Promis
   if (prior) {
     delete state[noteId]
     await saveState(state)
-    if (existsSync(join(NOTES_DIR, prior.path))) {
+    if (existsSync(resolveInNotes(prior.path))) {
       const trashed = prior.path.replace(/\.md$/, '.deleted.md')
-      await rename(join(NOTES_DIR, prior.path), join(NOTES_DIR, trashed))
+      await rename(resolveInNotes(prior.path), resolveInNotes(trashed))
       console.log(`Local copy kept as notes/${trashed}`)
     }
   }

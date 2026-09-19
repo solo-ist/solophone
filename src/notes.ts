@@ -7,7 +7,10 @@
  */
 
 import type { JsonApiDocument, JsonApiResource, LightClient } from './api.js'
-import { LightApiError } from './api.js'
+import { FETCH_TIMEOUT_MS, LightApiError, assertBodyBounded } from './api.js'
+
+/** A text note larger than this is not a note — refuse to buffer it. */
+const MAX_NOTE_BYTES = 10 * 1024 * 1024
 
 export interface LightNote {
   id: string
@@ -52,7 +55,7 @@ export async function listNotes(client: LightClient): Promise<LightNote[]> {
  * string bodies, which breaks the S3 signature with a 403).
  */
 async function putPresigned(url: string, content: Uint8Array): Promise<void> {
-  const res = await fetch(url, { method: 'PUT', body: content })
+  const res = await fetch(url, { method: 'PUT', body: content, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!res.ok) {
     throw new LightApiError(`Presigned PUT failed (HTTP ${res.status})`, res.status)
   }
@@ -67,11 +70,16 @@ export async function getNoteContent(client: LightClient, noteId: string): Promi
   if (typeof url !== 'string') {
     throw new LightApiError(`No presigned_get_url in response for note ${noteId}`)
   }
-  const res = await fetch(url)
+  const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!res.ok) {
     throw new LightApiError(`Presigned GET failed for note ${noteId} (HTTP ${res.status})`, res.status)
   }
-  return Buffer.from(await res.arrayBuffer())
+  assertBodyBounded(res, MAX_NOTE_BYTES)
+  const buffer = Buffer.from(await res.arrayBuffer())
+  if (buffer.byteLength > MAX_NOTE_BYTES) {
+    throw new LightApiError(`Note ${noteId} body too large (${buffer.byteLength} bytes)`)
+  }
+  return buffer
 }
 
 /** Two-step create: POST the record, then PUT the body to the returned presigned URL. */

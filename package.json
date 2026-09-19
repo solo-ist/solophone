@@ -10,6 +10,7 @@
   "scripts": {
     "light": "tsx src/cli.ts",
     "light:op": "op run --env-file=.env -- tsx src/cli.ts",
+    "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

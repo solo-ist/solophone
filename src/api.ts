@@ -16,6 +16,41 @@ export const API_BASE = 'https://production.lightphonecloud.com'
 const API_HEADERS = { Accept: 'application/vnd.api+json' }
 const CONTENT_TYPE = 'application/vnd.api+json'
 
+/** Whole-call deadline for every API fetch. */
+export const FETCH_TIMEOUT_MS = 30_000
+/** Refuse to materialize API JSON bodies larger than this. */
+const MAX_JSON_BYTES = 10 * 1024 * 1024
+
+/** Throw before buffering a response whose declared size is implausible. */
+export function assertBodyBounded(res: Response, max = MAX_JSON_BYTES): void {
+  const declared = Number(res.headers.get('content-length') ?? '0')
+  if (Number.isFinite(declared) && declared > max) {
+    throw new LightApiError(`Response too large (${declared} bytes)`, res.status)
+  }
+}
+
+/** Read at most `cap` characters of an error body, then drop the stream. */
+async function boundedText(res: Response, cap = 300): Promise<string> {
+  const declared = Number(res.headers.get('content-length') ?? '0')
+  if (Number.isFinite(declared) && declared > 65536) return `(body ${declared} bytes, omitted)`
+  const reader = res.body?.getReader()
+  if (!reader) return ''
+  const decoder = new TextDecoder()
+  let out = ''
+  try {
+    while (out.length < cap) {
+      const { done, value } = await reader.read()
+      if (done) break
+      out += decoder.decode(value, { stream: true })
+    }
+  } catch {
+    // Body errors never mask the HTTP error we're reporting.
+  } finally {
+    await reader.cancel().catch(() => {})
+  }
+  return out.slice(0, cap)
+}
+
 export interface JsonApiResource {
   id: string
   type: string
@@ -121,10 +156,12 @@ export class LightClient {
       method: 'POST',
       headers: { ...API_HEADERS, 'Content-Type': CONTENT_TYPE },
       body: JSON.stringify({ email: this.credentials.email, password: this.credentials.password }),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
     if (!res.ok) {
       throw new LightApiError(`Login failed (HTTP ${res.status}) — check LIGHT_EMAIL / LIGHT_PASSWORD`, res.status)
     }
+    assertBodyBounded(res)
     const doc = (await res.json()) as JsonApiDocument
     const authRecord = doc.included?.[0]
     const token = str(authRecord?.attributes?.token)
@@ -154,6 +191,7 @@ export class LightClient {
           ...(body !== undefined ? { 'Content-Type': CONTENT_TYPE } : {}),
         },
         body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       })
 
     let res = await doFetch()
@@ -162,10 +200,11 @@ export class LightClient {
       res = await doFetch()
     }
     if (!res.ok) {
-      const text = (await res.text().catch(() => '')).slice(0, 300)
+      const text = await boundedText(res)
       throw new LightApiError(`${method} ${path} failed (HTTP ${res.status})${text ? `: ${text}` : ''}`, res.status)
     }
     if (res.status === 204) return null
+    assertBodyBounded(res)
     return (await res.json()) as JsonApiDocument
   }
 
@@ -174,8 +213,9 @@ export class LightClient {
     if (!this.token) return false
     const res = await fetch(`${API_BASE}/api/users/current`, {
       headers: { ...API_HEADERS, Authorization: `Bearer ${this.token}` },
-    })
-    return res.ok
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    }).catch(() => null)
+    return res?.ok ?? false
   }
 
   async listDevices(): Promise<{ devices: DeviceSummary[]; raw: JsonApiDocument }> {

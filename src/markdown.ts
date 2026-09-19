@@ -6,10 +6,17 @@
  * directory later. Note bodies are plain UTF-8 text — lossless as markdown.
  */
 
+import { createHash } from 'node:crypto'
+
 import type { LightNote } from './notes.js'
 
+/**
+ * JSON string escaping is valid YAML double-quoted style, and it covers
+ * newlines, quotes, backslashes, and control characters — so no server-fed
+ * value can ever break out of its scalar and inject frontmatter keys.
+ */
 export function yamlDoubleQuote(s: string): string {
-  return '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n') + '"'
+  return JSON.stringify(s)
 }
 
 export function noteToMarkdown(note: LightNote, content: string): string {
@@ -18,9 +25,9 @@ export function noteToMarkdown(note: LightNote, content: string): string {
     '---',
     `title: ${yamlDoubleQuote(note.title)}`,
     'source: lightphone',
-    `note_id: ${note.id}`,
-    `note_type: ${note.noteType}`,
-    `note_updated_at: ${note.updatedAt}`,
+    `note_id: ${yamlDoubleQuote(note.id)}`,
+    `note_type: ${yamlDoubleQuote(note.noteType)}`,
+    `note_updated_at: ${yamlDoubleQuote(note.updatedAt)}`,
     '---',
     '',
     body,
@@ -33,6 +40,15 @@ export function markdownBody(markdown: string): string {
   const end = markdown.indexOf('\n---\n', 4)
   if (end === -1) return markdown
   return markdown.slice(end + 5).replace(/^\n/, '')
+}
+
+/**
+ * First 8 chars of a well-formed (hex/dash UUID-ish) id; a hash of it
+ * otherwise \u2014 a hostile or drifted server id can never shape the filename.
+ */
+function idFragment(id: string): string {
+  if (/^[0-9a-f-]{8,}$/i.test(id)) return id.slice(0, 8).toLowerCase()
+  return createHash('sha256').update(id).digest('hex').slice(0, 8)
 }
 
 /**
@@ -49,5 +65,5 @@ export function filenameFor(note: LightNote): string {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 60) || 'untitled'
-  return `${slug}-${note.id.slice(0, 8)}.md`
+  return `${slug}-${idFragment(note.id)}.md`
 }
