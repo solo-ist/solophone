@@ -17,6 +17,7 @@ recorded here is the baseline; if it ever changes on an update, stop.
 | BrightMarket | 1.31.62 | `com.gios.brightmarket` | github.com/gi-os/BrightMarket | `c15078bcb72a89c67efb54d1a9fc1b00cc88da578891f8e96233a7d279550df6` | TOFU (`CN=BrightMarket, OU=gi-os`) |
 | BrightMailbox | 2.30.34 | `com.gios.brightmailbox` | gi-os (via BrightMarket) | `ab866f2a03fcd4d8e88d2da1bb3e295d080ac28f46ae6c5bb8c9b9d9cc9e23c9` | TOFU (`CN=BrightMailbox, OU=gi-os`) |
 | BrightControl ("Controls") | 4.34.293 | `com.gios.lightcontrol` | gi-os (via BrightMarket) | `a38858d990bb61057ef53d1f8aa3c5854d01f68585b34f115793b06298b593e8` | TOFU (`CN=LightControl, OU=gi-os`) |
+| Menu (own build) | 0.1.0 | `ist.solo.menu` | local: `~/Code/lp3-menu` ([solo-ist/lp3-menu](https://github.com/solo-ist/lp3-menu)) | debug key — **not yet a real identity** | built + installed from source |
 | Review (own build) | 0.6.2 | `com.soloist.review` | local: `~/Code/readwise-review` (light-sdk scaffold) | `83ac3b733db804765d4a888788d0a47d362e9682488712836b3ca449133c2da7` (`CN=soloist review`) | built + installed from source |
 
 Also present but **not sideloaded**: `at.bitfire.davdroid` 2.5.1-**ose-light**
@@ -324,8 +325,37 @@ adb shell content query --uri content://com.android.calendar/calendars \
 - **On 582 sideloaded entries are interleaved with first-party tools**, not
   segregated to the bottom as the v572 note claimed — verified 2026-09-19, when
   Slack, Claude, Aurora Store and Endel landed on page 3 between Light Keyboard
-  and Mailbox. Six per page. Whether they can be reordered, renamed, or hidden
-  is still unverified.
+  and Mailbox. Six per page.
+- **`LIGHTOS_SHOW_EXTERNAL_TOOLS` (namespace `system`) is the toolbox filter,
+  and it sorts by SDK marker, not by "sideloaded".** Set it to `0` and every
+  *plain* Android app drops out of the toolbox while light-sdk tools stay.
+  Verified 2026-09-19: at `0` the toolbox kept Directions, Directory, Timer,
+  Weather, Chats, Passes, News and Review, and dropped Slack, Claude, Aurora,
+  Market, Mailbox, Roll, Controls, 1Password, Sonos, Spotify, Todoist,
+  Composer, Obtainium, Molly Light, Home Assistant, Bluesky and Apple TV.
+  It is global — there is no per-app hide list anywhere in `settings`.
+- **A plain app can pose as a tool by declaring the SDK marker**, and then
+  survives that filter while keeping the abilities a real SDK tool is denied.
+  LightOS enumerates tools by querying broadcast receivers for
+  `com.thelightphone.sdk.ACTION_SDK_MARKER` and reading their `SDK_VERSION`
+  metadata, so an empty receiver is enough:
+
+  ```xml
+  <receiver android:name=".SdkMarkerReceiver"
+            android:enabled="true" android:exported="true">
+      <intent-filter>
+          <action android:name="com.thelightphone.sdk.ACTION_SDK_MARKER" />
+      </intent-filter>
+      <meta-data android:name="com.thelightphone.sdk.SDK_VERSION"
+                 android:value="0.1.1" />
+  </receiver>
+  ```
+
+  Proven with Menu on 2026-09-19: with the filter at `0` it stayed in the
+  toolbox alongside News and Review, and still launched other apps. Entirely
+  undocumented — the public SDK's emulator lists only marker-carrying tools,
+  and nothing describes this as a supported extension point. Expect it to
+  break.
 - The toolbox is **text labels only, no icons** (light-sdk#174); the label is
   `getApplicationLabel()`, fixed at build time.
 - Since v568, LightOS force-foregrounds itself on screen-off. If Molly Light
@@ -432,6 +462,24 @@ adb shell content query --uri content://com.android.calendar/calendars \
   throwaway stub on 2026-09-19 that appeared in the toolbox and launched its
   target — but since apps list themselves anyway (see quirks), a shim is only
   worth building to give something a *different label*.
+
+- **Per-app hiding from the toolbox is not achievable.** Tested 2026-09-19,
+  three dead ends:
+  1. Disabling just the launcher *component* of another package is refused
+     even for adb shell —
+     `SecurityException: Shell cannot change component state for ComponentInfo{…}`.
+     Android only lets the shell disable whole packages.
+  2. `pm disable-user <pkg>` does remove it from the toolbox, but the app then
+     cannot be launched at all (`Activity class … does not exist`), so nothing
+     else can launch it either. Hiding and launching are mutually exclusive.
+  3. An unprivileged app could never drive it regardless:
+     `CHANGE_COMPONENT_ENABLED_STATE` is `signature|privileged`.
+
+  The workable substitute is the global filter plus the SDK marker above: set
+  `LIGHTOS_SHOW_EXTERNAL_TOOLS=0` for a clean first-party toolbox, and let a
+  marker-carrying launcher app (Menu) hold the rest. The cost is that it's
+  all-or-nothing — every plain app disappears, so anything you still want
+  reachable has to be in Menu.
 
 ## Status to re-check (October 2026)
 
