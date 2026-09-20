@@ -481,6 +481,19 @@ adb shell content query --uri content://com.android.calendar/calendars \
   all-or-nothing — every plain app disappears, so anything you still want
   reachable has to be in Menu.
 
+  **This is the live configuration as of 2026-09-20.** The flag is `0`; Menu
+  holds all 18 plain apps across 4 pages, ordered by use: Molly, Claude,
+  Slack, Spotify, Home, 1Password / Todoist, Bluesky, Sonos, Apple TV, Roll,
+  Controls / Obtainium, Market, Mailbox, Aurora, Composer, QR. The toolbox is
+  down to three pages — Phone, Settings, Alarm, Album, Calculator, Calendar /
+  Directions, Directory, Timer, Weather, Chats, Passes / News, Review, Menu.
+
+  To undo: `adb shell settings put system LIGHTOS_SHOW_EXTERNAL_TOOLS 1`.
+  Menu's list is ordinary app data, so it survives the flag either way, and
+  the entries can be edited in-app rather than over adb. On a debug build
+  `adb shell run-as ist.solo.menu cat shared_prefs/menu.xml` reads it
+  directly — that's how the 18 were written without 18 dialogs.
+
 ## Status to re-check (October 2026)
 
 - Official **Tool Manager** (ADB-free local install over Wi-Fi): merged in
