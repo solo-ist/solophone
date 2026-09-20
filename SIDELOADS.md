@@ -136,8 +136,16 @@ with a real Google account. Bluesky came straight from GitHub instead.
 
 ⚠️ These certs are **Play App Signing** keys, not the vendors' own — 1Password's
 DN, for instance, reads `CN=Android, O=Google Inc.`. They still work as a TOFU
-baseline for detecting a change, but the DN does not identify the vendor the
-way the gi-os certs above do.
+baseline for detecting a change.
+
+**A certificate's DN proves nothing on its own.** Any name — `CN=LightControl`,
+`O=Home Assistant` — is chosen by whoever generated the key; a descriptive
+organization field is not evidence of who built the app. What these
+fingerprints are good for is *continuity*: if the signer changes on an update,
+stop. Actual trust comes from where the APK was fetched and whether the
+fingerprint matches one established independently (a published pin, or the same
+key seen across F-Droid and the project's own releases) — not from the string
+inside the certificate.
 
 All seven install and launch. An eighth, Endel, was installed and then removed
 — it hard-fails on Play licensing (see Removed).
@@ -151,8 +159,11 @@ launching but unproven beyond that.
 **Home Assistant is the exception worth copying.** Take the **minimal** flavor
 — built for de-Googled devices — from GitHub or F-Droid, never the Play/full
 build. It carries zero GMS references, produces no `GooglePlayServicesUtil`
-warnings at all, and is signed by `O=Home Assistant` rather than a Play
-re-signing key, so its provenance is better than anything Aurora delivers. It
+warnings at all, and is signed by the project's own key rather than a Play
+re-signing key — which matters not because the DN reads `O=Home Assistant`
+(a self-chosen string) but because the same key can be checked against both
+the GitHub release and F-Droid, giving an independent point of comparison
+Aurora's Play-signed APKs don't have. It
 does push over a **persistent WebSocket to your own HA server** (24 websocket
 refs in the APK, zero UnifiedPush), so notifications genuinely work here. Two
 caveats: it needs Local Push enabled server-side, and a persistent socket has
