@@ -559,8 +559,25 @@ are the only ones that need a bridge at all.
 
 ### Loose ends
 
-- **Contacts.** Threads show raw phone numbers until *iMessage Bridge* is also
-  granted Contacts; the log says `Failed to get contact access: Access Denied`.
+- **Contacts needs a purpose string, not just a grant.** With `contacts_mode:
+  mac` the bridge uses Contacts.framework, which macOS refuses outright unless
+  the bundle declares `NSContactsUsageDescription` — the request is denied with
+  no prompt, the log says `Failed to get contact access: Access Denied`, and the
+  app never appears under Privacy & Security → Contacts (that pane has no `+`,
+  so an app must ask before it can be toggled). Add the key, re-sign, restart;
+  the log then says `Contact access is allowed` and displaynames are PUT to
+  Matrix on the next sync. 22 of 39 handles resolved; the rest are shortcodes
+  (`67587`), businesses, and SMS-relay artifacts suffixed `(smsfp_of)` /
+  `(smsft_or)` whose base numbers aren't in the address book either — nothing to
+  recover there.
+- **Editing the bundle breaks Full Disk Access.** An ad-hoc signature's
+  designated requirement is pinned to its cdhash, so *any* change to the bundle
+  — adding one `Info.plist` key included — invalidates the FDA grant. The bridge
+  then crash-loops on `unable to open database file: operation not permitted`
+  with `last exit code = 14`, every 15 s per `ThrottleInterval`. Fix is to
+  toggle the entry off/on (or remove with `−` and re-add with `+`) in Privacy &
+  Security → Full Disk Access. Set every plist key you need *before* granting
+  FDA — especially when standing this up on the Studio, so it's one grant.
 - **Attachments.** `no such file` under `~/Library/Messages/Attachments/…` is
   iCloud offloading, not permissions — the bytes were never downloaded.
 - **Sleep.** A LaunchAgent survives logout and terminal exit, but not sleep.
