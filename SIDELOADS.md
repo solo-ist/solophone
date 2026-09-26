@@ -384,9 +384,11 @@ means no sender, no Light push relay, and no `INTERNET` permission.
 
 ## iMessage → Chats (Beeper / Matrix bridge)
 
-Working as of 2026-09-26. The path is **Messages.app on a Mac → `chat.db` →
-mautrix-imessage → Beeper hungryserv → Matrix → `com.lightphone.chats`**, and
-every hop was verified on-device.
+Working **both directions** as of 2026-09-26. The path is **Messages.app on a
+Mac → `chat.db` → mautrix-imessage → Beeper hungryserv → Matrix →
+`com.lightphone.chats`**, and every hop was verified on-device. Receiving
+worked as soon as TCC was solved; sending needed a database patch — see
+*Sending was broken* below.
 
 ### Chats is a real Matrix client
 
@@ -483,6 +485,77 @@ set to `~/Library/Application Support/bbctl/prod/sh-imessage` — the config's
 SQLite URI is relative (`file:mautrix-imessage.db`). `launchctl print
 gui/$(id -u)/ist.solo.imessage-bridge` showing `last exit code = 0` is the
 proof FDA actually took, since a terminal run will still fail.
+
+### Sending was broken until `last_seen_handle` was filled in
+
+Receiving worked from the first sync; every outbound message from the LP3
+failed. Two errors, always in this order:
+
+```
+Can't get chat id "any;-;+1732…"      (-1728)
+Can't make any into type constant.    (-1700)
+```
+
+This build merges each DM's iMessage, SMS and RCS chats into a single portal
+whose GUID carries the pseudo-service `any` — all 36 rooms are `any;-;…`, and
+the 39 `iMessage;-;…` and 39 `SMS;-;…` portals beside them have no room at all.
+To send, the Mac connector is meant to read `portal.last_seen_handle` for the
+*real* service. It logs which source it used — `(portal guid)` or
+`(last seen handle)` — and that field is the tell.
+
+The column was empty on all 36 rooms, so the connector fell back to the `any`
+GUID, which neither AppleScript path can use:
+
+```applescript
+set theService to 1st service whose service type = %s   -- %s = any → -1700
+on error number -2753                                   -- only -2753 is caught
+```
+
+A migration-ordering bug rather than anything configurable:
+
+```sql
+ALTER TABLE portal ADD COLUMN last_seen_handle TEXT NOT NULL DEFAULT '';
+UPDATE portal SET last_seen_handle=guid WHERE guid LIKE '%;-;%';
+```
+
+On a fresh install that `UPDATE` runs before any portal exists, so it matches
+nothing — and the insert path never sets the column. There is no config knob
+for it; `disable_sms_portals` and `force_uniform_dm_senders` are both unrelated
+(the latter rewrites the *sender* in a DM, not the chat).
+
+The real service per chat is recoverable, because `message.sender_guid` does
+carry it. Stop the agent, back up the database, then:
+
+```sql
+UPDATE portal
+SET last_seen_handle = (
+  SELECT m.sender_guid FROM message m
+  WHERE m.portal_guid = portal.guid AND m.sender_guid <> ''
+  ORDER BY m.timestamp DESC LIMIT 1
+)
+WHERE mxid IS NOT NULL AND mxid <> ''
+  AND guid LIKE 'any;%'
+  AND EXISTS (SELECT 1 FROM message m2
+              WHERE m2.portal_guid = portal.guid AND m2.sender_guid <> '');
+```
+
+then `launchctl kickstart -k gui/$(id -u)/ist.solo.imessage-bridge`. Portal
+GUIDs and mxids are untouched, so nothing changes on the phone — no new rooms,
+no orphans, no re-backfill. The bridge reads the values on startup and does not
+overwrite them.
+
+**What actually delivers is the buddy fallback, not the chat id.** Even with a
+correct GUID the first attempt still fails `-1728` (`Can't get chat id
+"SMS;-;+1732…"`); the retry then succeeds because `service type = SMS` is a
+valid AppleScript constant where `any` was not. So this fix depends on the
+service name being one Messages knows — which makes the five `RCS` rooms
+suspect, since `RCS` is probably not a valid `service type`. Untested; if they
+fail with `-1700`, point those five at `SMS` with the same UPDATE shape.
+
+Worth knowing before investing in this: **only 12 of the 36 bridged threads are
+actually iMessage.** 19 are SMS and 5 are RCS, and the LP3 receives both
+natively over its own SIM — so those 24 arrive twice. The 12 iMessage threads
+are the only ones that need a bridge at all.
 
 ### Loose ends
 
