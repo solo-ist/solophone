@@ -382,6 +382,129 @@ Three more findings from building it:
 Phase 2 reminders are therefore local exact alarms plus a notification. That
 means no sender, no Light push relay, and no `INTERNET` permission.
 
+## iMessage → Chats (Beeper / Matrix bridge)
+
+Working as of 2026-09-26. The path is **Messages.app on a Mac → `chat.db` →
+mautrix-imessage → Beeper hungryserv → Matrix → `com.lightphone.chats`**, and
+every hop was verified on-device.
+
+### Chats is a real Matrix client
+
+The finding that generalises: **Light's Chats renders arbitrary Matrix rooms
+and decrypts megolm.** It is not limited to the two rooms a fresh Beeper
+account ships with.
+
+- A room created through the raw client API appeared in the list within 60
+  seconds, with a working conversation view and composer.
+- Idle, it long-polls `/sync` on a 30 s timeout returning **176 B** — an empty
+  response carrying just `next_batch`. When events arrive it switches to
+  chunked responses in 157–272 ms. Watch it with
+  `adb logcat -d | grep MatrixRepository`.
+- "Note to self" is `m.megolm.v1.aes-sha2` and renders in full on the phone,
+  so E2EE works.
+
+So **any** network Beeper can bridge should reach this phone. iMessage is
+just the first instance.
+
+Two corollaries worth writing down, because both cost hours:
+
+An empty Beeper account looks exactly like a broken one. `bbctl whoami`
+listing only `hungryserv` means **zero bridges** — hungryserv is Beeper's own
+homeserver process, not a connector. Chats was syncing perfectly against
+nothing.
+
+An encrypted event in a room with **no `m.room.encryption` state** shows as
+`[Encrypted message]`. That is correct behaviour against a malformed room —
+no megolm session was ever established — and not evidence that the client
+lacks E2EE. Don't conclude from a hand-built test room.
+
+### imessagego is a dead end on current macOS
+
+`bbctl` offers two iMessage types. **`imessagego`** (binary
+`beeper-imessage`) registers a *new device* against Apple's IDS, so it needs
+validation data from `mac-registration-provider` — which supports Apple
+Silicon only on 12.7.1, 13.3.1, 13.5–13.6.4 and 14.0–14.3, and prints
+"unsupported" and exits on anything newer. Both halves are archived:
+`beeper/imessage` 2025-04, `beeper/mac-registration-provider` 2026-04. On
+macOS 26 this cannot work, and the "registration code" it prompts for is
+unobtainable.
+
+Use **`imessage`** instead — `mautrix-imessage`, still maintained, which
+puppets a Mac already signed into iMessage. No registration code, no device
+registration, nothing for Apple to revoke.
+
+```sh
+bbctl run --type imessage --param imessage_platform=mac sh-imessage
+```
+
+`platform` options are `mac`, `mac-nosip`, `ios`, `android`, `bluebubbles`;
+`mac` needs no BlueBubbles server.
+
+### The TCC trap
+
+`mautrix-imessage` must read `~/Library/Messages/chat.db`, which needs **Full
+Disk Access**. Two traps, in order:
+
+1. **macOS attributes file access to the *responsible process*** — the app at
+   the head of the chain, not the binary doing the reading. Launched from a
+   terminal, TCC checks **that terminal**, so granting FDA to
+   `mautrix-imessage` does nothing. Granting it to the terminal works but
+   hands FDA to every command ever run there.
+2. **TCC's FDA list is unreliable for loose Unix executables.** Adding the
+   bare ad-hoc-signed binary did not take effect even under `launchd`, where
+   the binary *is* its own responsible process.
+
+The fix is a minimal `.app` wrapper plus a LaunchAgent, which settles
+attribution and persistence together:
+
+```sh
+APP="$HOME/Applications/iMessage Bridge.app"
+BIN="$HOME/Library/Application Support/bbctl/prod/binaries"
+mkdir -p "$APP/Contents/MacOS"
+cp "$BIN/mautrix-imessage" "$BIN/libolm.3.dylib" "$APP/Contents/MacOS/"
+# Info.plist: CFBundleExecutable=mautrix-imessage,
+#             CFBundleIdentifier=ist.solo.imessagebridge, LSBackgroundOnly=true
+codesign --force -s - "$APP"
+```
+
+`libolm.3.dylib` must sit beside the executable — the binary's rpath includes
+`@executable_path`, and without it the copy dies with
+`Library not loaded: @rpath/libolm.3.dylib`.
+
+Then grant FDA to **iMessage Bridge** in System Settings → Privacy & Security,
+and verify rather than guess:
+
+```sh
+"$APP/Contents/MacOS/mautrix-imessage" --check-permissions   # exit 43 = denied, 0 = good
+```
+
+Run it from a LaunchAgent (`ist.solo.imessage-bridge`) with `WorkingDirectory`
+set to `~/Library/Application Support/bbctl/prod/sh-imessage` — the config's
+SQLite URI is relative (`file:mautrix-imessage.db`). `launchctl print
+gui/$(id -u)/ist.solo.imessage-bridge` showing `last exit code = 0` is the
+proof FDA actually took, since a terminal run will still fail.
+
+### Loose ends
+
+- **Contacts.** Threads show raw phone numbers until *iMessage Bridge* is also
+  granted Contacts; the log says `Failed to get contact access: Access Denied`.
+- **Attachments.** `no such file` under `~/Library/Messages/Attachments/…` is
+  iCloud offloading, not permissions — the bytes were never downloaded.
+- **Sleep.** A LaunchAgent survives logout and terminal exit, but not sleep.
+  On a laptop, bridging stops with the lid. The Studio is the real home for
+  this — same recipe, plus Messages.app signed in there.
+- **`bbctl` needs a real TTY.** Its prompts emit `ESC[6n` (cursor-position
+  query; the parser regex `\x1b\[(\d+);(\d+)R$` is in the binary) and block
+  until a terminal answers. Piped, or under a bare pty, it hangs or reads EOF
+  and exits 0 having done nothing — which looks exactly like "not logged in".
+  `expect` replying `ESC[50;120R` drives it fine. It also reuses a running
+  Beeper Desktop session, so no email code is needed.
+- **A waiting `bbctl` prompt is not a shell.** A stray
+  `bbctl run --type imessagego` left at "Enter iMessage registration code"
+  swallowed a pasted shell command as the token and regenerated `config.yaml`
+  around it, silently. If typed commands seem to vanish, check for a `bbctl`
+  process sitting on a tty.
+
 ## Known quirks / levers
 
 - **Full Android apps self-register in the toolbox.** Verified 2026-09-19 by
@@ -518,6 +641,12 @@ means no sender, no Light push relay, and no `INTERNET` permission.
   letting anyone repoint clients at a MITM server that harvests the server
   password (upstream issue #783, open since March 2026). Applies to any
   FCM-based bridge, not just BlueBubbles.
+
+  **Superseded 2026-09-26** — the actual goal, iMessage on the LP3, was
+  met without FCM at all: `mautrix-imessage` into Beeper, read in the
+  first-party Chats tool over Matrix. See *iMessage → Chats* above. The
+  reasoning here still stands for any bridge whose Android client needs
+  FCM push.
 
 - **light-sdk tools cannot launch other apps**, so a toolbox "passthrough"
   shim built on the SDK is impossible: the Gradle plugin fails the build on
