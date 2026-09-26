@@ -324,6 +324,46 @@ adb shell content query --uri content://com.android.calendar/calendars \
   --projection _id:account_name:account_type:calendar_displayName:visible
 ```
 
+## Routine (own build) — what a plain app can do that a tool can't
+
+`~/Code/lp3-routine` is a step-by-step routine timer that replaces Routinery.
+It was specced as a light-sdk tool with push reminders. Reading the SDK
+source killed that design:
+
+- `onPushNotification(ByteArray)` runs on `Dispatchers.IO` with no context,
+  so it can't vibrate, notify, or even open its own Room/DataStore. Both
+  need a `SealedLightContext`, which only screens and `LightWork` jobs get.
+- `LightHapticFeedback` needs an Android `Context` that tools can't reach.
+- `android.app.*` (AlarmManager, NotificationManager) is a blocked import.
+
+So it is a plain app with the toolbox marker, like Menu. The spike, on
+LightOS `582-release-lp3` on 2026-09-26, was run with a debug build
+(`ist.solo.routine.debug`):
+
+| Check | Result |
+|---|---|
+| `USE_EXACT_ALARM` | **Granted at install** for a sideload. `dumpsys alarm` shows `exactAllowReason=policy_permission`. |
+| Step-end buzz, screen off | 3 × 20 s steps buzzed at :11.42, :31.40, :51.40, ~100 ms after each deadline. `Usage=ALARM`, `displayId=-1`, so it came from the receiver, not the UI. There was no double buzz. |
+| Process SIGKILLed mid-step (`run-as … kill -9`), screen dozing | The alarm cold-started the app and buzzed on the deadline (12:11:00.28). Reopening 34 s later showed the next step at **0:26**, which is exact. |
+| Haptics preference | LightOS's toggle is plain `Settings.System haptic_feedback_enabled` (=1). |
+| `light_force_focus_level` | `2` on this phone. None of the above was affected by it. |
+| Notification from a plain app, screen off | Posted fine (`importance=4`, `category=reminder`). The system vibrated it (`Usage=NOTIFICATION`), and **BrightControl woke the screen with a banner** 1.5 s later (`WAKE_REASON_APPLICATION, details=BrightControl:banner`). LightOS itself shows no shade, so Controls is the visible surface. |
+| Cold start to interactive | 457 ms (`ActivityTaskManager: Displayed`). |
+
+Two gotchas:
+
+- **`force-stop` cancels alarms, and `am kill` or `kill -9` doesn't.** If
+  LightOS ever force-stops apps, an in-progress run would lose its alarm.
+  The timer itself is still right on reopen, because it's anchored, not
+  ticking. Nothing seen so far suggests LightOS force-stops apps.
+- **Long-press plays two haptics** unless the view's own feedback is off.
+  `dumpsys vibrator_manager` showed our 40 ms tick `cancelled_superseded`
+  by the framework's `HEAVY_CLICK`. Call `setHapticFeedbackEnabled(false)`
+  on any view you buzz for yourself.
+
+Phase 2 reminders are therefore local exact alarms plus a notification. That
+means no sender, no Light push relay, and no `INTERNET` permission.
+
 ## Known quirks / levers
 
 - **Full Android apps self-register in the toolbox.** Verified 2026-09-19 by
