@@ -19,7 +19,7 @@ recorded here is the baseline; if it ever changes on an update, stop.
 | BrightControl ("Controls") | 4.34.293 | `com.gios.lightcontrol` | gi-os (via BrightMarket) | `a38858d990bb61057ef53d1f8aa3c5854d01f68585b34f115793b06298b593e8` | TOFU (`CN=LightControl, OU=gi-os`) |
 | Menu (own build) | 0.1.0 | `ist.solo.menu` | local: `~/Code/lp3-menu` ([solo-ist/lp3-menu](https://github.com/solo-ist/lp3-menu)) | `a47333715c2265c3b61b452e257a664e6f537679ce67766f342898cf258aceb0` (`CN=soloist menu`) | built + installed from source |
 | Review (own build) | 0.6.2 | `com.soloist.review` | local: `~/Code/readwise-review` (light-sdk scaffold) | `83ac3b733db804765d4a888788d0a47d362e9682488712836b3ca449133c2da7` (`CN=soloist review`) | built + installed from source |
-| Routine (own build) | 0.1.0 | `ist.solo.routine` | local: `~/Code/lp3-routine` | `0922901f33568120e64e44b5266b1f121f45793122d1c4b7abea9cbdcfba1fdd` (`CN=soloist routine`) | built + installed from source via `scripts/release.sh` (pin-gated) |
+| Routine (own build) | 0.3.0 | `ist.solo.routine` | local: `~/Code/lp3-routine` | `0922901f33568120e64e44b5266b1f121f45793122d1c4b7abea9cbdcfba1fdd` (`CN=soloist routine`) | built + installed from source via `scripts/release.sh` (pin-gated) |
 
 Also present but **not sideloaded**: `at.bitfire.davdroid` 2.5.1-**ose-light**
 is a Light-customized *system* app at `/product/app/DAVx5`, installer
@@ -361,6 +361,23 @@ Two gotchas:
   `dumpsys vibrator_manager` showed our 40 ms tick `cancelled_superseded`
   by the framework's `HEAVY_CLICK`. Call `setHapticFeedbackEnabled(false)`
   on any view you buzz for yourself.
+
+Three more findings from building it:
+
+- **An alarm vibration outranks a tap.** While a `USAGE_ALARM` vibration
+  plays, Android drops a `USAGE_TOUCH` one (`ignored_for_higher_importance`),
+  so a button's tap tick doesn't cut a long buzz short. Call
+  `Vibrator.cancel()` explicitly.
+- **The LightOS keyboard (`app.lightphonekeyboard/.LightImeService`) works in
+  plain apps, but hides a bottom bar.** It paints a black strip above its
+  keys that isn't part of its reported inset. Its touch region starts at
+  y 538, but it draws from about 470, so under `adjustResize` a bottom
+  button bar ends up drawn over. Put form actions at the top. Its ↵ key
+  sends `IME_ACTION_DONE`.
+- **Focus falls back to a list when the keyboard closes**, and Android's
+  default focus highlight paints a grey box over it. Set
+  `android:defaultFocusHighlightEnabled=false` in the theme. Set
+  `colorAccent` to white too, or the text cursor is teal.
 
 Phase 2 reminders are therefore local exact alarms plus a notification. That
 means no sender, no Light push relay, and no `INTERNET` permission.
