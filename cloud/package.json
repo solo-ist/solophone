@@ -1,9 +1,9 @@
 {
-  "name": "solophone",
+  "name": "solophone-cloud",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Spike: sync notes between a Light Phone 3 (Light cloud account) and local markdown files, toward a Prose integration",
+  "description": "Unofficial client for the Light Phone cloud API: sync the Notes tool with local markdown, toggle developer mode, list tools",
   "engines": {
     "node": ">=18"
   },

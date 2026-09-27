@@ -392,7 +392,7 @@ async function cmdTools(): Promise<void> {
 // ---------------------------------------------------------------- main
 
 function usage(): void {
-  console.log(`SoloPhone — Light Phone 3 notes sync spike
+  console.log(`SoloPhone cloud — Light Phone cloud API client
 
 Usage: npm run light -- <command>
 
