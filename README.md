@@ -1,84 +1,99 @@
 # SoloPhone
 
-An unofficial TypeScript client for the **Light Phone cloud API**, plus field
-notes from sideloading and building tools for the Light Phone III.
+An opinionated loadout for the **Light Phone III**: what's on my phone, how
+it's arranged, and why. The aim is to keep the phone quiet while making the
+few things it's missing work properly. Everything here was set up and checked
+on a real device, and [docs/setup.md](docs/setup.md) reproduces it step by
+step.
 
-Zero runtime dependencies — Node 18+ `fetch` and nothing else — so the client
-lifts cleanly into other projects (it was written as groundwork for a
-[Prose](https://github.com/solo-ist/prose) sync provider).
+> **Unofficial.** Not affiliated with or endorsed by Light. Most of this
+> works at the Android layer beneath LightOS, which Light doesn't document
+> and can change in any update. Heavy tinkering may void your warranty.
 
-> **Unofficial.** Not affiliated with or endorsed by Light. The cloud API is
-> undocumented and could change at any time. Use at your own risk, be gentle
-> with Light's servers, and know that heavy Android-layer tinkering can void
-> your warranty.
+## Opinions
 
-## What the CLI does
+These decide what's in and what's out.
 
-```
-npm run light -- login          # authenticate + discover your device & notes tool
-npm run light -- list           # list notes on the phone
-npm run light -- pull           # pull all text notes to ./notes/*.md (incremental)
-npm run light -- push-test      # round-trip proof: create a test note on the phone
-npm run light -- dev-mode on    # toggle LightOS Developer Mode from the terminal
-npm run light -- tools          # list the cloud tool catalog for your device
-```
+- **The toolbox is for tools.** Plain Android apps are hidden from it. What
+  you use daily sits on a hardware button; the rest is one entry in Menu.
+- **No Google, and no pretending otherwise.** This phone can't run Google
+  Play Services or microG; the bootloader is locked. So push only arrives
+  where an app keeps its own connection or speaks UnifiedPush. Everything
+  else is silent, on purpose or not, and gets picked accordingly.
+- **Build it when it's missing, as a plain app if the SDK can't.** A
+  light-sdk tool is preferred, since it can go to Light's Tool Library. But
+  a tool can't launch other apps, buzz with the screen off, or act on a
+  push, so anything needing those is an ordinary Android app carrying the
+  toolbox marker.
+- **Every APK is checked before it's trusted.** Every signing certificate is
+  recorded, and a change on update means stop. Own builds use a private key
+  per app, and a release gate refuses anything unpinned, debuggable, or
+  backing up data. Anything signed with light-sdk's public dev key is
+  treated as unauthenticated.
+- **Nothing phones home that doesn't have to.** Own tools ask for the
+  minimum permissions. Menu, Notifications and Routine have no internet
+  access at all.
 
-Notes land as markdown with frontmatter (`title`, `source: lightphone`,
-`note_id`, timestamps), keyed by note id (titles aren't unique), with sync
-state in `notes/.lightphone/sync-state.json`.
+## The loadout
 
-## Credentials
+### Toolbox and navigation
 
-Copy `.env.example` to `.env`. Plaintext works, but the intended pattern is
-**1Password secret references** resolved at runtime so credentials never touch
-disk or your shell history:
+| | What | Why |
+|---|---|---|
+| Toolbox | Light's tools, plus Menu, Routine and Review | `LIGHTOS_SHOW_EXTERNAL_TOOLS=0` hides every plain app; marker-carrying tools stay |
+| Buttons | Full apps and the Notifications tool, via Controls | The apps you open daily are one press away, without a toolbox slot |
+| [Menu](https://github.com/solo-ist/lp3-menu) | Controls, Settings, Web Tools | A second, curated toolbox for the rarely used |
+| Focus | `light_force_focus_level 2` | Stops LightOS stealing the foreground, so sockets and installers survive screen-off |
+| Rotation | Locked to portrait | A rotation rebuilds the screen and loses whatever you were typing |
 
-```sh
-# .env
-LIGHT_EMAIL=op://<vault>/<item>/username
-LIGHT_PASSWORD=op://<vault>/<item>/password
+### Own tools
 
-npm run light:op -- login   # wraps the CLI in `op run`
-```
-
-Sessions cache to `.token.json` (gitignored, mode 600). Tokens are good for
-~30 days; the client re-authenticates once on any 401.
-
-## Field notes
-
-- **[FINDINGS.md](FINDINGS.md)** — the cloud API as actually observed: auth
-  flow, notes CRUD via presigned S3 URLs, quirks (suffix-less UTC timestamps,
-  device-tool discovery), and gotchas.
-- **[SIDELOADS.md](SIDELOADS.md)** — sideloading a Light Phone III end to end:
-  developer mode, the Android-layer entry route, adb setup, APK verification
-  (checksums + cert pinning/TOFU), and known LightOS quirks and levers.
-
-## Ecosystem
-
-This repo is the hub for LP3 work under [solo-ist](https://github.com/solo-ist).
-Tools built on Light's [light-sdk](https://github.com/lightphone/light-sdk)
-each live in their own repo (the scaffold expects to be the repo root, and
-Light's Tool Library builds each tool from a standalone public commit):
-
-| Repo | What |
+| Tool | What it does |
 |---|---|
-| **solophone** (this repo) | Cloud API client, device management, field notes |
-| [readwise-review](https://github.com/solo-ist/readwise-review) | Readwise Daily Review tool for LightOS — highlights, streaks, recovery |
-| *(future)* prose tool | On-phone capture companion to [prose#897](https://github.com/solo-ist/prose/issues/897) |
+| [Notifications](https://github.com/solo-ist/lp3-notifications) | One quiet screen for everything currently notifying: open, dismiss, hide. Stores nothing. |
+| [Routine](https://github.com/solo-ist/lp3-routine) | Step-by-step routine timer (replaces Routinery), with a buzz that works with the screen off. |
+| [Menu](https://github.com/solo-ist/lp3-menu) | A second toolbox, drawn to match LightOS. |
+| Review | Readwise daily review in LightOS's design language (light-sdk; private repo). |
 
-New tools follow the same pattern: clone `lightphone/light-sdk`, build in
-`tool/`, keep `lightphone` as the `upstream` remote, publish under solo-ist.
+### Messaging
 
-## Credits
+| | How |
+|---|---|
+| Signal | Official app. Without Google it keeps its own connection, so messages still arrive. Its signer matches the fingerprint Signal publishes. |
+| iMessage | Bridged into Light's own **Chats**: Messages on a Mac → `mautrix-imessage` → Beeper → Matrix. Works both ways, with contact names. |
+| SMS | Native, over the phone's own SIM. |
 
-API shapes were learned from [garado/light](https://github.com/garado/light)
-(GPL-3.0), used **strictly as documentation** — no code was reused; this
-client is an independent MIT-licensed implementation talking to Light's HTTPS
-API directly. Thanks also to the LP3 community around
-[awesome-light](https://github.com/garado/awesome-light) and the
-[light-sdk](https://github.com/lightphone/light-sdk) team for opening the
-platform.
+### Apps
 
-## License
+| | Notes |
+|---|---|
+| Controls | Button shortcuts, lock-screen notifications, and the banner that makes other apps' notifications visible. Needs adb grants. |
+| Home Assistant (minimal) | The de-Googled build, which pushes over its own WebSocket, so it genuinely notifies. |
+| Claude, Slack, Spotify, Todoist, Sonos, 1Password, Bluesky, StoryGraph | Work, but can't receive Google push, so they're silent. 1Password is the autofill provider. |
+| Roll, News, Mailbox, Composer, QR, Web Tools, Light Keyboard, Light Remote | Community tools from gi-os and others. |
+| Calendar | Already syncing through Light's built-in DAVx5. Nothing to install. |
 
-[MIT](LICENSE)
+Updates come through **Obtainium** for anything on GitHub, **Aurora** for
+Play-only apps, and **BrightMarket** for community tools.
+
+### Known risks
+
+- **Chats, Passes and Wi-Fi are signed with light-sdk's public dev key**, so
+  anyone could sign an update Android would accept. It matters most for
+  Chats, which holds the Matrix session behind iMessage. See *Signing and
+  trust* in the field notes.
+
+### Ruled out
+
+microG and Google Play Services (locked bootloader), Endel (Play licensing),
+Verses (public dev key), LightChat, Molly Light (replaced by Signal), and
+BlueBubbles (needs Google push). The reasons are in the field notes.
+
+## Docs
+
+- **[docs/setup.md](docs/setup.md)**: reproduce the loadout, in order, with
+  a check after each step.
+- **[docs/field-notes.md](docs/field-notes.md)**: the evidence. What was
+  tried, what the phone showed, and the dead ends, dated.
+- **[cloud/](cloud/)**: an unofficial client for the Light Phone cloud API
+  (notes sync, developer mode), with [its own findings](cloud/FINDINGS.md).
