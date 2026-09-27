@@ -170,7 +170,7 @@ published fingerprint exists, so the value here is the baseline.
 | Composer | `com.zacksimpson.composer` | 1.0.2 | Obtainium | `c36238493aa1055c58ca19a350e68c22e53793226887d0bee290611bf1fd12c3` |
 | Chats | `com.lightphone.chats` | 0.19.0 | BrightMarket | ⚠️ `b9c33e29b0ccad2bff11acab55f65a3c517ef4bc92cd9c77785366fa353d5f28` **public dev key** |
 | Passes | `com.lightphone.passes` | 0.6.0 | BrightMarket | ⚠️ `b9c33e29b0ccad2bff11acab55f65a3c517ef4bc92cd9c77785366fa353d5f28` **public dev key** |
-| Wi-Fi | `com.lightphone.wifi` | 0.1.0 | BrightMarket | ⚠️ `b9c33e29b0ccad2bff11acab55f65a3c517ef4bc92cd9c77785366fa353d5f28` **public dev key** |
+| Wi-Fi | `com.lightphone.wifi` | 0.2.0 (reports 0.1.0) | BrightMarket | ⚠️ `b9c33e29b0ccad2bff11acab55f65a3c517ef4bc92cd9c77785366fa353d5f28` **public dev key** |
 | Signal | `org.thoughtcrime.securesms` | 8.28.4 | Aurora | `4be4f6cd5be844083e900279dc822af65a547fecc26aba7ff1f5203a45518cd8`; legacy `29f34e5f27f211b424bc5bf9d67162c0eafba2da35af35c16416fc446276ba26` matches signal.org ✅ |
 | Home Assistant (minimal) | `io.homeassistant.companion.android.minimal` | 2026.6.5 | GitHub | `11194ba809b42ddf0e1a7dec6842a59c7ff1119c5482e95febffd5c6014daa5a` |
 | Bluesky | `xyz.blueskyweb.app` | 1.132.0 | GitHub | `40058ec68a355521d08df24998cf99a71491335c65d75885039e80c025aaddff` |
@@ -191,8 +191,9 @@ is a Light-customized system app (step 7). Weather and Rideshare are Light's
 own builds, signed `CN=Light` (`1814fa7c54f21fb766871767e1c2cd5379dd63155627fa26a15e88039cc08144`).
 
 ⚠️ **Chats, Passes and Wi-Fi are signed with light-sdk's public dev key.**
-Anyone can sign an "update" for them. See *Signing and trust* in the field
-notes before deciding whether to keep them.
+Anyone can sign an "update" for them. They're community tools by fenleon
+(open source), not Light's, and the installed builds match fenleon's
+releases. See *Signing and trust* in the field notes.
 
 ### Obtainium
 

@@ -79,7 +79,8 @@ Play-only apps, and **BrightMarket** for community tools.
 ### Known risks
 
 - **Chats, Passes and Wi-Fi are signed with light-sdk's public dev key**, so
-  anyone could sign an update Android would accept. It matters most for
+  anyone could sign an update Android would accept. They're open-source
+  community tools by fenleon, not Light's, and match fenleon's releases. It matters most for
   Chats, which holds the Matrix session behind iMessage. See *Signing and
   trust* in the field notes.
 

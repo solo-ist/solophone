@@ -161,8 +161,20 @@ production tools on the same phone are signed differently: Weather and
 Rideshare carry `CN=Light, O=Light` (`1814fa7c…8144`). Anyone holding the
 public key can build an APK Android will accept as an update to any of the
 three. That matters most for Chats, which holds the Matrix/Beeper session
-and so the bridged iMessage history. Unresolved: whether Light itself ships
-these builds dev-signed, or BrightMarket rebuilt them.
+and so the bridged iMessage history.
+
+**None of the three is Light's.** Despite the `com.lightphone.*` package
+names, all are community tools by **fenleon**, public on GitHub:
+`fenleon/chats` (MIT), `fenleon/passes` (MIT) and `fenleon/wifi` (no
+license). BrightMarket installs them from those repos' releases. The dev-key
+signature is the author's, not tampering: installed Chats and Passes are
+byte-identical to fenleon's v0.19.0 and v0.6.0 release APKs. Installed Wi-Fi
+matches the SHA-256 fenleon published for **v0.2.0**, even though it reports
+itself as 0.1.0 (versionCode 1): the author didn't bump the version. So the
+risk is the key, not the builds. Since the source is public, they can be
+rebuilt and signed with a private key. BrightMarket's catalog lists several
+other community tools signed the same way (Lists, BrightHome, light-mail,
+Tracker, Pokey).
 
 ⚠️ These certs are **Play App Signing** keys, not the vendors' own — 1Password's
 DN, for instance, reads `CN=Android, O=Google Inc.`. They still work as a TOFU
