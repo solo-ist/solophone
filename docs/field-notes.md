@@ -531,7 +531,7 @@ are the only ones that need a bridge at all.
 
 ## History
 
-- **2026-09-20: Menu held every plain app.** The first configuration after
+- **2026-09-20: Menu took every plain app.** The first configuration after
   turning the external-tools filter off put all 18 plain apps in Menu:
 
   The flag was `0`; Menu
@@ -555,8 +555,10 @@ are the only ones that need a bridge at all.
   `adb shell run-as ist.solo.menu cat shared_prefs/menu.xml` reads it
   directly — that's how the 18 were written without 18 dialogs.
 
-  Superseded: full apps now open from Controls button shortcuts, and Menu
-  holds just Controls, Settings and Web Tools (see setup.md).
+  The arrangement has held since. As of 2026-09-27 Menu holds 21 entries
+  (Signal replaced Molly; StoryGraph, Remote, QR and Web Tools joined; Apple
+  TV left), and the most-used apps are also on Controls button shortcuts.
+  See setup.md.
 
 ## Status to re-check (October 2026)
 

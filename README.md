@@ -14,8 +14,8 @@ step.
 
 These decide what's in and what's out.
 
-- **The toolbox is for tools.** Plain Android apps are hidden from it. What
-  you use daily sits on a hardware button; the rest is one entry in Menu.
+- **The toolbox is for tools.** Plain Android apps are hidden from it and
+  live in Menu instead, with the ones you use most also on a hardware button.
 - **No Google, and no pretending otherwise.** This phone can't run Google
   Play Services or microG; the bootloader is locked. So push only arrives
   where an app keeps its own connection or speaks UnifiedPush. Everything
@@ -41,8 +41,8 @@ These decide what's in and what's out.
 | | What | Why |
 |---|---|---|
 | Toolbox | Light's tools, plus Menu, Routine and Review | `LIGHTOS_SHOW_EXTERNAL_TOOLS=0` hides every plain app; marker-carrying tools stay |
-| Buttons | Full apps and the Notifications tool, via Controls | The apps you open daily are one press away, without a toolbox slot |
-| [Menu](https://github.com/solo-ist/lp3-menu) | Controls, Settings, Web Tools | A second, curated toolbox for the rarely used |
+| [Menu](https://github.com/solo-ist/lp3-menu) | Every plain app: 21 entries across 4 pages | A second toolbox, drawn to match LightOS, for everything the real one hides |
+| Buttons | Most-used apps and the Notifications tool, via Controls | One press away, without a toolbox slot |
 | Focus | `light_force_focus_level 2` | Stops LightOS stealing the foreground, so sockets and installers survive screen-off |
 | Rotation | Locked to portrait | A rotation rebuilds the screen and loses whatever you were typing |
 

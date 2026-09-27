@@ -44,11 +44,14 @@ adb shell settings put system user_rotation 0
 
 - **Toolbox:** Light's first-party tools, plus the marker-carrying Chats,
   Passes, Wi-Fi, News, Weather, Rideshare, Review, Menu and Routine.
-- **Menu** (own build): Controls, Settings and Web Tools. Add or remove
-  entries from Menu itself (long-press a row).
-- **Full apps** — Claude, Slack, Spotify, Signal, Todoist and the rest —
-  open from **hardware button shortcuts configured in Controls**, as does
-  the Notifications tool. None of them has a toolbox slot.
+- **Menu** (own build) holds every plain app, 21 entries across 4 pages:
+  1Password, Bluesky, Claude, Home, Sonos, Spotify / Slack, StoryGraph,
+  Remote, Mailbox, Todoist, Camera / QR, Composer, Signal, Market, Aurora,
+  Obtainium / Controls, Settings, Web Tools. Use **+ add** at the end to add
+  one, and long-press a row to rename, move or remove it.
+- **Hardware button shortcuts**, configured in Controls, open the most-used
+  apps and the Notifications tool directly. Notifications has no toolbox
+  slot or Menu entry; the button is how you reach it.
 
 Check:
 
@@ -178,9 +181,9 @@ published fingerprint exists, so the value here is the baseline.
 | Sonos | `com.sonos.acr2` | 89.00.51 | Aurora | `7c34eb3cfbda05faf56e8890a2abbac14b3036e6e4358849b98e8819b6b7b329` |
 | 1Password | `com.onepassword.android` | 8.12.36 | Aurora | `b35b68d5ce8450557c6a55fd64b51feac110cb36d6a3521c5948db3a380a34a9` |
 | StoryGraph | `com.thestorygraph.thestorygraph` | 1.30 | Aurora | `e8dad264ba813d0cb7fcd929bc702ded0cea7634c8b6e986936d39f46a23ca6d` |
-| Menu | `ist.solo.menu` | 0.1.0 | own build | `a47333715c2265c3b61b452e257a664e6f537679ce67766f342898cf258aceb0` (`CN=soloist menu`) |
-| Notifications | `ist.solo.notifications` | 0.4.2 | own build | `c68450264672e37d999839c9733b146b0389cb257b2380582e621cf9080e4adf` (`CN=soloist notifications`) |
-| Routine | `ist.solo.routine` | 0.4.1 | own build | `0922901f33568120e64e44b5266b1f121f45793122d1c4b7abea9cbdcfba1fdd` (`CN=soloist routine`) |
+| Menu | `ist.solo.menu` | 0.1.1 | own build | `a47333715c2265c3b61b452e257a664e6f537679ce67766f342898cf258aceb0` (`CN=soloist menu`) |
+| Notifications | `ist.solo.notifications` | 0.4.3 | own build | `c68450264672e37d999839c9733b146b0389cb257b2380582e621cf9080e4adf` (`CN=soloist notifications`) |
+| Routine | `ist.solo.routine` | 0.4.2 | own build | `0922901f33568120e64e44b5266b1f121f45793122d1c4b7abea9cbdcfba1fdd` (`CN=soloist routine`) |
 | Review | `com.soloist.review` | 0.6.2 | own build | `83ac3b733db804765d4a888788d0a47d362e9682488712836b3ca449133c2da7` (`CN=soloist review`) |
 
 Also present but not sideloaded: DAVx5 (`at.bitfire.davdroid` 2.5.1-ose-light)
