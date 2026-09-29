@@ -44,6 +44,10 @@ adb shell settings put system user_rotation 0
 
 - **Toolbox:** Light's first-party tools, plus the marker-carrying Chats,
   Passes, Wi-Fi, News, Weather, Rideshare, Review, Menu and Routine.
+  Settings → Preferences → Tools → **Edit Toolbox** reorders Light's own
+  tools (Weather and Rideshare count as Light's). Every other marker tool
+  follows them in package-name order, and none can be moved or hidden
+  there.
 - **Menu** (own build) holds every plain app, 21 entries across 4 pages:
   1Password, Bluesky, Claude, Home, Sonos, Spotify / Slack, StoryGraph,
   Remote, Mailbox, Todoist, Camera / QR, Composer, Signal, Market, Aurora,
@@ -184,7 +188,7 @@ published fingerprint exists, so the value here is the baseline.
 | Menu | `ist.solo.menu` | 0.1.1 | own build | `a47333715c2265c3b61b452e257a664e6f537679ce67766f342898cf258aceb0` (`CN=soloist menu`) |
 | Notifications | `ist.solo.notifications` | 0.4.3 | own build | `c68450264672e37d999839c9733b146b0389cb257b2380582e621cf9080e4adf` (`CN=soloist notifications`) |
 | Routine | `ist.solo.routine` | 0.4.2 | own build | `0922901f33568120e64e44b5266b1f121f45793122d1c4b7abea9cbdcfba1fdd` (`CN=soloist routine`) |
-| Review | `com.soloist.review` | 0.6.2 | own build | `83ac3b733db804765d4a888788d0a47d362e9682488712836b3ca449133c2da7` (`CN=soloist review`) |
+| Review | `ist.solo.review` | 0.7.0 | own build | `83ac3b733db804765d4a888788d0a47d362e9682488712836b3ca449133c2da7` (`CN=soloist review`) |
 
 Also present but not sideloaded: DAVx5 (`at.bitfire.davdroid` 2.5.1-ose-light)
 is a Light-customized system app (step 7). Weather and Rideshare are Light's

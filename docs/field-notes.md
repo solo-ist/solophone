@@ -69,6 +69,21 @@ Verified on a Light Phone III (TLP301, Android 14 / API 34) running LightOS
   marker-carrying launcher app (Menu) hold the rest. The cost is that it's
   all-or-nothing — every plain app disappears, so anything you still want
   reachable has to be in Menu or on a Controls button shortcut.
+- **Toolbox order after Light's own tools is package-name order.** LightOS
+  appends marker tools in the order `queryBroadcastReceivers` returns them for
+  `ACTION_SDK_MARKER`: all at priority 0, so sorted by package name. Edit
+  Toolbox only lists Light's own tools. Verified 2026-09-28 on 582, where
+  `com.lightphone.*`, then `com.lightrss.reader`, then `ist.solo.*` matched
+  the toolbox page for page. Two consequences:
+  - The order can be changed only by renaming a package, or by an
+    `android:priority` on the marker's intent-filter in a build you control.
+    Review moved to `ist.solo.review` (0.7.0) to sit with Menu and Routine.
+    As a new package it had to be installed fresh, with history carried over
+    by `run-as` tar and the token scanned again.
+  - **A light-sdk tool can't be hidden and still work.**
+    `LightSdkService.verifyCallerIsInstalledClient` refuses any caller
+    without the same marker receiver, so dropping Wi-Fi from the toolbox
+    would also cut it off from the SDK.
 - **light-sdk tools cannot launch other apps**, so a toolbox "passthrough"
   shim built on the SDK is impossible: the Gradle plugin fails the build on
   `android.content.Intent` / `startActivity(` / `getSystemService(` /
