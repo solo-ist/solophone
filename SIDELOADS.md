@@ -390,6 +390,33 @@ Mac → `chat.db` → mautrix-imessage → Beeper hungryserv → Matrix →
 worked as soon as TCC was solved; sending needed a database patch — see
 *Sending was broken* below.
 
+**Status 2026-10-12: moving to Solo Prime.** The MacBook bridge had been
+crash-looping since 2026-09-26 12:01 (82k runs, `last exit code = 14`,
+`unable to open database file: operation not permitted` — the FDA grant was
+invalidated, see *Editing the bundle breaks Full Disk Access*) and nothing had
+synced for 16 days. It was unloaded and its LaunchAgent, bridge dir
+(`prod/sh-imessage`), app wrapper and logs moved to
+`~/Archive/imessage-bridge-macbook-2026-10-12/`. `bbctl`, its login
+(`~/Library/Application Support/bbctl/config.json`) and Beeper Desktop stay on
+the MacBook. The Studio side is a **fresh** `bbctl run` (old bridge deleted on
+Beeper, rooms recreated), done by hand from a runbook posted to Slack; it is
+pending until the Studio shows `last exit code = 0`. Studio-specific findings:
+
+- **No new login needed.** Copying `bbctl` (arm64 Mach-O) and `config.json` to
+  `solo-one` reuses the Beeper session; `bbctl whoami` over ssh is the check.
+  Beeper Desktop is not needed on the Studio.
+- **Messages must be signed in as `solo-one`** with Messages in iCloud on,
+  otherwise `chat.db` has zero handles and the bridge has nothing to read. It
+  was empty as of 2026-10-12.
+- **FDA probably needs the admin account.** Full Disk Access is a system-level
+  TCC entry; on the non-admin `solo-one` the pane is expected to ask for
+  `solo-ist` credentials. Contacts and Automation are per-user prompts.
+- **Set `NSContactsUsageDescription` and `NSAppleEventsUsageDescription`** in
+  the wrapper's Info.plist before the FDA grant — the MacBook bundle never had
+  either, and the doc below already says adding a key later breaks FDA.
+- **The `last_seen_handle` patch is a post-backfill step on every fresh
+  install**, not a one-off: the fresh DB starts with the column empty again.
+
 ### Chats is a real Matrix client
 
 The finding that generalises: **Light's Chats renders arbitrary Matrix rooms
