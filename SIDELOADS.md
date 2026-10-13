@@ -18,7 +18,7 @@ recorded here is the baseline; if it ever changes on an update, stop.
 | BrightMailbox | 2.30.34 | `com.gios.brightmailbox` | gi-os (via BrightMarket) | `ab866f2a03fcd4d8e88d2da1bb3e295d080ac28f46ae6c5bb8c9b9d9cc9e23c9` | TOFU (`CN=BrightMailbox, OU=gi-os`) |
 | BrightControl ("Controls") | 4.34.293 | `com.gios.lightcontrol` | gi-os (via BrightMarket) | `a38858d990bb61057ef53d1f8aa3c5854d01f68585b34f115793b06298b593e8` | TOFU (`CN=LightControl, OU=gi-os`) |
 | Menu (own build) | 0.1.0 | `ist.solo.menu` | local: `~/Code/lp3-menu` ([solo-ist/lp3-menu](https://github.com/solo-ist/lp3-menu)) | `a47333715c2265c3b61b452e257a664e6f537679ce67766f342898cf258aceb0` (`CN=soloist menu`) | built + installed from source |
-| Review (own build) | 0.7.0 | `ist.solo.review` | local: `~/Code/readwise-review` (light-sdk scaffold; renamed from `com.soloist.review` 2026-09-29, 0.7.1 scroll-reset fix built but not yet installed) | `83ac3b733db804765d4a888788d0a47d362e9682488712836b3ca449133c2da7` (`CN=soloist review`) | built + installed from source |
+| Review (own build) | 0.7.1 | `ist.solo.review` | local: `~/Code/readwise-review` (light-sdk scaffold; renamed from `com.soloist.review` 2026-09-29) | `83ac3b733db804765d4a888788d0a47d362e9682488712836b3ca449133c2da7` (`CN=soloist review`) | built + installed from source |
 | Routine (own build) | 0.3.0 | `ist.solo.routine` | local: `~/Code/lp3-routine` ([solo-ist/lp3-routine](https://github.com/solo-ist/lp3-routine)) | `0922901f33568120e64e44b5266b1f121f45793122d1c4b7abea9cbdcfba1fdd` (`CN=soloist routine`) | built + installed from source via `scripts/release.sh` (pin-gated) |
 
 Also present but **not sideloaded**: `at.bitfire.davdroid` 2.5.1-**ose-light**
